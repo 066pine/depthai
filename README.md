@@ -1,3 +1,58 @@
+# DepthAI Calibration & Custom Fixes (066pine Fork)
+
+This repository is a fork of the official [luxonis/depthai](https://github.com/luxonis/depthai) codebase. It contains specific technical patches and bug fixes to resolve API incompatibilities, syntax errors, and image processing issues when running camera calibration on custom ChArUco board setups (e.g., 13x7 grid, 4cm squares, 3cm markers) with OAK-D Lite devices.
+
+---
+
+## Key Improvements & Bug Fixes
+
+### 1. Syntax & API Compatibility Fixes (`calibrate.py`)
+* **Bracket Mismatch Syntax Errors:** Fixed incorrect bracket closures (`SyntaxError`) when referencing camera info arrays (`cam_info["name"]`) during lens focus positioning setup.
+* **Obsolete `fps` Keyword Removal:** Resolved `TypeError` caused by `pipeline.create(dai.node.Camera)` rejecting the legacy `fps = fps` keyword argument in newer DepthAI library versions.
+
+### 2. Array Dimension Mismatch Mitigation (`np.hstack` Errors)
+* **Dynamic Image & Coverage Resizing:** Addressed `ValueError` exceptions caused by 1-pixel height discrepancies (239px vs 240px) between the mono streams (left/right) and the color stream.
+* **Implementation:** Integrated automatic runtime `cv2.resize` checks before horizontal array concatenation for both `combinedImage` and `combinedCoverageImage`:
+
+```python
+if subCoverageImage.shape[0] != combinedCoverageImage.shape[0]:
+    subCoverageImage = cv2.resize(
+        subCoverageImage,
+        (subCoverageImage.shape[1], combinedCoverageImage.shape[0]),
+    )
+```
+
+### 3. Board Detection & Calibration Process Stability
+* **Marker Threshold & Crash Prevention:** Resolved `TypeError: 'NoneType' object is not iterable` inside `camera_pose_charuco` triggered when low-quality frame captures yielded insufficient ChArUco marker detections (<5 markers).
+* **Calibration Validation:** Successfully generated full intrinsic/extrinsic parameter sets and verified permanent EEPROM flash writes on OAK-D Lite hardware using custom 13x7 ChArUco targets.
+
+---
+
+## Getting Started
+
+### Requirements
+Ensure you are running the setup inside a clean Python virtual environment with `depthai` and `opencv-python` installed:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Running Calibration with Custom ChArUco Board
+Execute `calibrate.py` with your board configuration flags:
+
+```bash
+python3 calibrate.py -s 4 --board OAK-D-LITE -nx 7 -ny 4
+```
+
+To process an existing offline dataset:
+
+```bash
+python3 calibrate.py -s 4 --board OAK-D-LITE -nx 7 -ny 4 -m process
+```
+
+
 # DepthAI API Demo Program
 
 [![Discord](https://img.shields.io/discord/790680891252932659?label=Discord)](https://discord.gg/luxonis)
